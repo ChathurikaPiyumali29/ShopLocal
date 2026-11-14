@@ -6,19 +6,30 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  FlatList,
+  ScrollView,
   Alert,
+  Platform,
   StyleSheet,
 } from 'react-native';
 
 import { useShop } from '../context/ShopContext';
 
-export default function SalesScreen() {
+const showMessage = (title, message) => {
+  if (Platform.OS === 'web') {
+    window.alert(title + '\n' + message);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
+export default function SalesScreen({ navigation }) {
   const {
     products,
     setProducts,
     sales,
     setSales,
+    returns,
+    getReturnedQuantity,
   } = useShop();
 
   const [selectedId, setSelectedId] = useState('');
@@ -32,34 +43,43 @@ export default function SalesScreen() {
     const qty = Number(quantity);
 
     if (!selectedProduct) {
-      Alert.alert('Error', 'Please select a product');
+      showMessage('Error', 'Please select a product.');
       return;
     }
 
     if (!Number.isInteger(qty) || qty <= 0) {
-      Alert.alert('Error', 'Enter a valid quantity');
+      showMessage('Error', 'Enter a valid quantity.');
       return;
     }
 
     if (qty > Number(selectedProduct.quantity)) {
-      Alert.alert('Error', 'Not enough stock available');
+      showMessage('Error', 'Not enough stock available.');
       return;
     }
 
-    const total = qty * Number(selectedProduct.sellPrice);
+    const unitPrice = Number(selectedProduct.sellPrice);
+
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      showMessage('Error', 'Invalid selling price.');
+      return;
+    }
+
+    const total = qty * unitPrice;
 
     const newSale = {
-      id: Date.now().toString(),
+      id:
+        Date.now().toString() +
+        Math.random().toString(36).slice(2, 8),
       productId: selectedId,
       productName: selectedProduct.name,
       quantity: qty,
-      total: total,
+      unitPrice,
+      total,
       date: new Date().toISOString(),
     };
 
-    // Reduce available stock
-    setProducts(
-      products.map(item =>
+    setProducts(previous =>
+      previous.map(item =>
         item.id === selectedId
           ? {
               ...item,
@@ -69,44 +89,58 @@ export default function SalesScreen() {
       )
     );
 
-    // Save sales record
-    setSales([newSale, ...sales]);
+    setSales(previous => [newSale, ...previous]);
 
-    Alert.alert(
+    showMessage(
       'Success',
-      'Sale recorded successfully!\nTotal: Rs. ' + total
+      'Sale recorded successfully!\nTotal: Rs. ' +
+        total.toFixed(2)
     );
 
     setQuantity('1');
     setSelectedId('');
   };
 
-  return (
-    <View style={styles.container}>
+  const totalSales = sales.reduce(
+    (sum, item) => sum + Number(item.total || 0),
+    0
+  );
 
+  const totalRefunds = returns.reduce(
+    (sum, item) => sum + Number(item.refundAmount || 0),
+    0
+  );
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.heading}>Record a Sale</Text>
 
       <Text style={styles.label}>Select Product</Text>
 
-      <FlatList
-        data={products}
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
+        style={styles.productList}
+      >
+        {products.map(item => (
           <TouchableOpacity
+            key={item.id}
             style={[
               styles.product,
               selectedId === item.id && styles.selected,
             ]}
             onPress={() => setSelectedId(item.id)}
           >
-            <Text>{item.name}</Text>
+            <Text style={styles.productName}>{item.name}</Text>
             <Text>Rs. {item.sellPrice}</Text>
             <Text>Stock: {item.quantity}</Text>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </ScrollView>
 
       {selectedProduct && (
         <Text style={styles.label}>
@@ -131,32 +165,76 @@ export default function SalesScreen() {
         <Text style={styles.buttonText}>Record Sale</Text>
       </TouchableOpacity>
 
+      <Text style={styles.heading}>Sales Summary</Text>
+
+      <View style={styles.summary}>
+        <Text style={styles.summaryText}>
+          Total Sales: Rs. {totalSales.toFixed(2)}
+        </Text>
+
+        <Text style={styles.summaryText}>
+          Total Refunds: Rs. {totalRefunds.toFixed(2)}
+        </Text>
+
+        <Text style={styles.netText}>
+          Net Revenue: Rs. {(totalSales - totalRefunds).toFixed(2)}
+        </Text>
+      </View>
+
       <Text style={styles.heading}>Sales History</Text>
 
-      <FlatList
-        data={sales}
-        keyExtractor={item => item.id}
-        ListEmptyComponent={
-          <Text>No sales recorded yet.</Text>
-        }
-        renderItem={({ item }) => (
-          <View style={styles.sale}>
-            <Text style={styles.saleName}>
-              {item.productName}
-            </Text>
+      {sales.length === 0 ? (
+        <Text>No sales recorded yet.</Text>
+      ) : (
+        sales.map(item => {
+          const returned = getReturnedQuantity(item.id);
+          const remaining = Number(item.quantity) - returned;
 
-            <Text>Quantity: {item.quantity}</Text>
+          return (
+            <View key={item.id} style={styles.sale}>
+              <Text style={styles.saleName}>
+                {item.productName}
+              </Text>
 
-            <Text>Revenue: Rs. {item.total}</Text>
+              <Text style={styles.info}>
+                Quantity Sold: {item.quantity}
+              </Text>
 
-            <Text>
-              Date: {new Date(item.date).toLocaleDateString()}
-            </Text>
-          </View>
-        )}
-      />
+              <Text style={styles.info}>
+                Revenue: Rs. {Number(item.total).toFixed(2)}
+              </Text>
 
-    </View>
+              <Text style={styles.info}>
+                Returned Quantity: {returned}
+              </Text>
+
+              <Text style={styles.info}>
+                Date: {new Date(item.date).toLocaleDateString()}
+              </Text>
+
+              {remaining > 0 ? (
+                <TouchableOpacity
+                  style={styles.returnButton}
+                  onPress={() =>
+                    navigation.navigate('Returns', {
+                      saleId: item.id,
+                    })
+                  }
+                >
+                  <Text style={styles.buttonText}>
+                    Return Product
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.returnedLabel}>
+                  Fully Returned
+                </Text>
+              )}
+            </View>
+          );
+        })
+      )}
+    </ScrollView>
   );
 }
 
@@ -164,7 +242,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F7F5',
+  },
+  content: {
     padding: 15,
+    paddingBottom: 35,
   },
   heading: {
     fontSize: 21,
@@ -175,37 +256,66 @@ const styles = StyleSheet.create({
   label: {
     fontWeight: 'bold',
     marginVertical: 8,
+    color: '#333',
+  },
+  productList: {
+    marginBottom: 12,
+    flexGrow: 0,
   },
   product: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     padding: 13,
     marginRight: 10,
     borderRadius: 10,
-    minWidth: 110,
+    minWidth: 125,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
   },
   selected: {
     backgroundColor: '#A8D5BC',
-    borderWidth: 1,
     borderColor: '#174D3C',
   },
+  productName: {
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
   input: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     padding: 13,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
   },
   button: {
     backgroundColor: '#174D3C',
     padding: 15,
     borderRadius: 10,
     marginTop: 15,
+    alignItems: 'center',
   },
   buttonText: {
-    color: 'white',
+    color: '#FFFFFF',
     textAlign: 'center',
     fontWeight: 'bold',
   },
+  summary: {
+    backgroundColor: '#E2F1E8',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  summaryText: {
+    fontSize: 15,
+    color: '#174D3C',
+    marginBottom: 7,
+  },
+  netText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#174D3C',
+  },
   sale: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     padding: 14,
     borderRadius: 10,
     marginVertical: 6,
@@ -214,5 +324,22 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: 'bold',
     color: '#174D3C',
+    marginBottom: 8,
+  },
+  info: {
+    color: '#555',
+    marginBottom: 5,
+  },
+  returnButton: {
+    backgroundColor: '#C47B21',
+    padding: 12,
+    borderRadius: 9,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  returnedLabel: {
+    color: '#B45309',
+    fontWeight: 'bold',
+    marginTop: 10,
   },
 });

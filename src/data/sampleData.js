@@ -1,43 +1,95 @@
 
 export const sampleProducts = [
   {
-  id: '6',
-  name: 'Exercise Book',
-  category: 'Stationery',
-  buyPrice: 100,
-  sellPrice: 130,
-  quantity: 50
-},
-{
-  id: '7',
-  name: 'Blue Pen',
-  category: 'Stationery',
-  buyPrice: 30,
-  sellPrice: 40,
-  quantity: 100
-},
-{
-  id: '8',
-  name: 'Pencil',
-  category: 'Stationery',
-  buyPrice: 20,
-  sellPrice: 30,
-  quantity: 100
-},
-{
-  id: '9',
-  name: 'Eraser',
-  category: 'Stationery',
-  buyPrice: 15,
-  sellPrice: 25,
-  quantity: 60
-},
-{
-  id: '10',
-  name: 'Ruler',
-  category: 'Stationery',
-  buyPrice: 25,
-  sellPrice: 40,
-  quantity: 30
-}
+    id: '1',
+    name: 'Blue Pen',
+    category: 'Stationery',
+    buyPrice: 20,
+    sellPrice: 30,
+    quantity: 50,
+    supplierId: 'S001',
+  },
+  {
+    id: '2',
+    name: 'Exercise Book',
+    category: 'Stationery',
+    buyPrice: 80,
+    sellPrice: 100,
+    quantity: 25,
+    supplierId: 'S001',
+  },
+  {
+    id: '3',
+    name: 'Rice 1kg',
+    category: 'Food',
+    buyPrice: 180,
+    sellPrice: 220,
+    quantity: 25,
+    supplierId: 'S002',
+  },
+  {
+    id: '4',
+    name: 'Sugar 1kg',
+    category: 'Food',
+    buyPrice: 240,
+    sellPrice: 280,
+    quantity: 15,
+    supplierId: 'S002',
+  },
+  {
+    id: '5',
+    name: 'Soap',
+    category: 'Personal Care',
+    buyPrice: 100,
+    sellPrice: 130,
+    quantity: 30,
+    supplierId: 'S003',
+  },
+  {
+    id: '6',
+    name: 'Milk Powder',
+    category: 'Food',
+    buyPrice: 900,
+    sellPrice: 1050,
+    quantity: 8,
+    supplierId: 'S002',
+  },
+  {
+    id: '7',
+    name: 'Biscuits',
+    category: 'Snacks',
+    buyPrice: 100,
+    sellPrice: 120,
+    quantity: 4,
+    supplierId: 'S003',
+  },
 ];
+
+export const sampleSuppliers = [
+  {
+    id: 'S001',
+    name: 'ABC Suppliers',
+    contactPerson: 'Nimal Perera',
+    phone: '0771234567',
+    address: 'Vavuniya',
+    email: 'abc@gmail.com',
+  },
+  {
+    id: 'S002',
+    name: 'City Wholesale',
+    contactPerson: 'Kamal Silva',
+    phone: '0711234567',
+    address: 'Colombo',
+    email: 'city@gmail.com',
+  },
+  {
+    id: 'S003',
+    name: 'Beauty Suppliers',
+    contactPerson: 'Saman Fernando',
+    phone: '0751234567',
+    address: 'Jaffna',
+    email: 'beauty@gmail.com',
+  },
+];
+
+export const sampleSales = [];
